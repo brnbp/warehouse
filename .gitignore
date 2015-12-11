@@ -1,4 +1,8 @@
-/vendor
+/vendor/*
+!/vendor/connections
+!/vendor/composer/autoload_psr4.php
+
+
 /node_modules
 Homestead.yaml
 Homestead.json
