@@ -1,0 +1,9 @@
+{
+  "name": "connections/Connections",
+  "license": "MIT",
+  "autoload": {
+    "psr-4": {
+      "ConnectionsBaseDir\\": "dbs/"
+    }
+  }
+}
