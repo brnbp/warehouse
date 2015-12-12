@@ -1,5 +1,7 @@
 # Warehouse v1
 
+php artisan serve
+
 ## Como Utilizar:
 
 * Esta API necessita de uma chave de autenticação para poder ser utilizada. Basta informar ela no header 'auth'
