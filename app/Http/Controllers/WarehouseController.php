@@ -5,9 +5,13 @@ namespace App\Http\Controllers;
 use App\Http\Requests;
 use App\Log;
 use App\Site;
+use App\Storage\StorageDriverInterface;
+use App\Storage\MysqlStorage;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Validator;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
+
 
 /**
  * Class WarehouseController
@@ -44,11 +48,13 @@ class WarehouseController extends Controller
             return response('', 401);
         }
 
-        if (Site::validateFilters() === false) {
+        $Site = App::make('StorageServiceSite');
+
+        if ($Site->validateFilters() === false) {
             return response('', 400);
         }
 
-        return response(Site::getLog($ecommerce), Site::getHttpResponseCode(), [
+        return response($Site->getLog($ecommerce), $Site->getHttpResponseCode(), [
            'Content-Type: application/json'
         ]);
     }
@@ -64,13 +70,15 @@ class WarehouseController extends Controller
             return response('', 401);
         }
 
-        if (Log::validate($request->all()) === false) {
+        $Log = App::make('StorageServiceLog');
+
+        if ($Log->validate($request->all()) === false) {
             return response('', 400);
         }
 
-        Log::make();
+        $Log->make();
 
-        return response(Log::returnRequest(), 201, [
+        return response($Log->returnRequest(), 201, [
             'Content-Type: application/json'
         ]);
     }
