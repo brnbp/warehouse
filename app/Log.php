@@ -3,7 +3,7 @@
 namespace App;
 
 use App\Http\Controllers\WarehouseController;
-use ConnectionsBaseDir\MysqlDB;
+use App\Storage\StorageDriverInterface;
 use Cron\Tests\HoursFieldTest;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Validator;
@@ -15,16 +15,17 @@ use Illuminate\Support\Facades\Validator;
  */
 class Log extends Model
 {
-    use MysqlDB;
+    /** @var StorageDriverInterface */
+    private $StorageDriver;
 
     /** $container array contains all data from request */
-    public static $container;
+    public $container;
 
     /** $site */
-    private static $site;
+    private $site;
 
     /** $allowed_fields array  */
-    protected static $allowed_fields = [
+    protected $allowed_fields = [
         'identifier' => 0,
         'log_name' => 1,
         'level' => 2,
@@ -32,11 +33,16 @@ class Log extends Model
         'site' => 4
     ];
 
+    public function __construct(StorageDriverInterface $StorageDriver)
+    {
+        $this->StorageDriver = $StorageDriver;
+    }
+
     /**
      * @param $request
      * @return bool
      */
-    public static function validate($request)
+    public function validate($request)
     {
         $validate = Validator::make($request, [
             'log_name' => 'required|max:50',
@@ -49,22 +55,22 @@ class Log extends Model
             return false;
         }
 
-        self::$container = $request;
+        $this->container = $request;
 
-        if (self::validateAllowedFields() === false) {
+        if ($this->validateAllowedFields() === false) {
             return false;
         }
 
-        self::defineTable(self::$container['site']);
-        self::$site = self::$container['site'];
+        $this->StorageDriver->defineTable($this->container['site']);
+        $this->site = $this->container['site'];
 
         $data_created = new \DateTime();
-        self::$container = [
+        $this->container = [
             'data_created' => $data_created->format('Y-m-d H:i:s'),
-            'level' => WarehouseController::validateLevel(self::$container['level']),
-            'log_name' => self::$container['log_name'],
-            'identifier' => isset(self::$container['identifier']) ? self::$container['identifier'] : 'none',
-            'content' => self::$container['content']
+            'level' => WarehouseController::validateLevel($this->container['level']),
+            'log_name' => $this->container['log_name'],
+            'identifier' => isset($this->container['identifier']) ? $this->container['identifier'] : 'none',
+            'content' => $this->container['content']
         ];
 
         return true;
@@ -74,9 +80,9 @@ class Log extends Model
      * Validade if has only allowed fields
      * @return bool
      */
-    private static function validateAllowedFields()
+    private function validateAllowedFields()
     {
-        if (count(array_diff_key(self::$container, self::$allowed_fields)) > 0) {
+        if (count(array_diff_key($this->container, $this->allowed_fields)) > 0) {
             return false;
         }
 
@@ -87,38 +93,38 @@ class Log extends Model
      * Create log on database
      * @return bool
      */
-    public static function make()
+    public function make()
     {
-        if (self::verifyExistence() === true) {
+        if ($this->verifyExistence() === true) {
             return false;
         }
 
-        Notification::Slack(array_merge(self::$container, ['site' => self::$site]));
+        Notification::Slack(array_merge($this->container, ['site' => $this->site]));
 
-        self::insert(self::$container);
+        $this->StorageDriver->insert($this->container);
     }
 
     /**
      * Verify Existence of content on database
      * @return bool return true if exists and false otherwise
      */
-    private static function verifyExistence()
+    private function verifyExistence()
     {
-        if (self::$container['level'] == 3) {
+        if ($this->container['level'] == 3) {
             return false;
         }
 
         $filters = [
-            'log_name' => self::$container['log_name'],
-            'content' => self::$container['content'],
-            'level' => self::$container['level']
+            'log_name' => $this->container['log_name'],
+            'content' => $this->container['content'],
+            'level' => $this->container['level']
         ];
 
-        if (isset(self::$container['identifier'])) {
-            $filters['identifier'] = self::$container['identifier'];
+        if (isset($this->container['identifier'])) {
+            $filters['identifier'] = $this->container['identifier'];
         }
 
-        $result_query = self::select($filters);
+        $result_query = $this->StorageDriver->select($filters);
 
         if ($result_query == false) {
             return false;
@@ -126,17 +132,20 @@ class Log extends Model
 
         $result_query = reset($result_query);
 
-        $affcted_rows = self::updateData(['incidents' => ++$result_query->incidents], ['id' => $result_query->id]);
+        $affected_rows = $this->StorageDriver->updateData(
+            ['incidents' => ++$result_query->incidents],
+            ['id' => $result_query->id]
+        );
 
-        return ($affcted_rows > 0) ? true: false;
+        return ($affected_rows > 0) ? true: false;
     }
 
     /**
      * Return request feita
      * @return array
      */
-    public static function returnRequest()
+    public function returnRequest()
     {
-        return self::$container;
+        return $this->container;
     }
 }
