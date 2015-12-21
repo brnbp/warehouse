@@ -1,23 +1,20 @@
 <?php
 
-namespace ConnectionsBaseDir;
-use DB;
-/**
- * Trait MysqlDB
- * @package ConnectionsBaseDir
- */
-trait MysqlDB
+namespace App\Storage;
+
+use Illuminate\Support\Facades\DB;
+
+class MysqlStorage implements StorageDriverInterface
 {
-    public $db = 'mysql';
-    private static $table_name = null;
+    private $table_name;
 
     /** @var string $where string contendo filtros WHERE em query */
-    private static $where;
+    private $where;
 
     /** @var string $options string contendo opcoes de ordem e limit em query */
-    private static $options;
+    private $options;
 
-    private static $database_structure = [
+    private $database_structure = [
         'id int(11) NOT NULL AUTO_INCREMENT',
         "data_created timestamp NOT NULL DEFAULT '0000-00-00 00:00:00'",
         "updated_in timestamp NOT NULL DEFAULT '0000-00-00 00:00:00' ON UPDATE CURRENT_TIMESTAMP",
@@ -28,6 +25,7 @@ trait MysqlDB
         "identifier varchar(50) NOT NULL DEFAULT 'none'",
         'content mediumtext NOT NULL',
         "notification_sent tinyint(1) NOT NULL DEFAULT 0",
+        "INDEX verify_existence (identifier, log_name, content(10000), level)",
         "PRIMARY KEY (id)"
     ];
 
@@ -35,9 +33,9 @@ trait MysqlDB
      * Set Table to future query
      * @param $table string table name
      */
-    public static function defineTable($table)
+    public function defineTable($table)
     {
-        self::$table_name = $table;
+        $this->table_name = $table;
     }
 
     /**
@@ -45,14 +43,14 @@ trait MysqlDB
      * @param  array  $content array onde keys são os campos da tabela
      *  e values as informações que serão inseridas
      */
-    public static function insert(array $content)
+    public function insert(array $content)
     {
-        self::validateTable();
+        $this->validateTable();
 
-        $keys = self::getKeysSQLFormated($content);
-        $values = self::getValuesSQLFormated($content);
+        $keys = $this->getKeysSQLFormated($content);
+        $values = $this->getValuesSQLFormated($content);
 
-        $query = 'INSERT INTO '.self::$table_name.'('.$keys.') VALUES('.$values.')';
+        $query = 'INSERT INTO '.$this->table_name.'('.$keys.') VALUES('.$values.')';
 
         return DB::insert($query);
     }
@@ -61,39 +59,40 @@ trait MysqlDB
      * SELECT query
      * @param  array $filter contem filtro WHERE
      * @param  array  $dados campos que devem ser selecionados em query
+     * @return
      */
-    public static function select(array $filter, array $dados = null)
+    public function select(array $filter, array $dados = null)
     {
-        self::validateTable();
+        $this->validateTable();
 
         $campos = '*';
         $where = '';
 
         if (is_null($dados) == false) {
-            $campos = self::getValuesSQLFormated($dados, true);
+            $campos = $this->getValuesSQLFormated($dados, true);
         }
 
-        $query = 'SELECT '.$campos.' FROM '.self::$table_name;
+        $query = 'SELECT '.$campos.' FROM '.$this->table_name;
 
-        self::setOptions($filter);
+        $this->setOptions($filter);
 
-        if (empty(self::$where) == false) {
-            $query .= ' WHERE '.self::$where;
+        if (empty($this->where) == false) {
+            $query .= ' WHERE '.$this->where;
         }
 
-        $query .= self::$options;
+        $query .= $this->options;
 
-        return self::fetchResult(DB::select($query));
+        return $this->fetchResult(DB::select($query));
     }
 
     /**
      * Set Options as filters to query
      * @param $filter
      */
-    private static function setOptions($filter)
+    private function setOptions($filter)
     {
         if (isset($filter['order']) && isset($filter['limit'])) {
-            self::$options = ' order by data_created ' . $filter['order'] . ' limit ' . $filter['limit'];
+            $this->options = ' order by data_created ' . $filter['order'] . ' limit ' . $filter['limit'];
             unset($filter['limit'], $filter['order']);
         }
 
@@ -107,7 +106,7 @@ trait MysqlDB
             $string .= ($key == 'level' ? "$key = $value and " : "$key = '$value' and ");
         }
 
-        self::$where = substr($string, 0, -4);
+        $this->where = substr($string, 0, -4);
     }
 
     /**
@@ -115,14 +114,14 @@ trait MysqlDB
      * @param  array  $content  string contendo campos e valores que serao atualizados
      * @param  string $filter string com filtro para atualização
      */
-    public static function updateData($dados, $filter)
+    public function updateData($dados, $filter)
     {
-        self::validateTable();
+        $this->validateTable();
 
         $dados = key($dados).' = '.$dados[key($dados)];
         $filter = key($filter).' = '.$filter[key($filter)];
 
-        return DB::update('UPDATE ' . self::$table_name . ' SET ' . $dados . ' WHERE ' . $filter);
+        return DB::update('UPDATE ' . $this->table_name . ' SET ' . $dados . ' WHERE ' . $filter);
     }
 
     /**
@@ -130,7 +129,7 @@ trait MysqlDB
      * @param $result_query
      * @return bool
      */
-    private static function fetchResult($result_query)
+    private function fetchResult($result_query)
     {
         if (count($result_query) < 1) {
             return false;
@@ -145,7 +144,7 @@ trait MysqlDB
      * @param  array  $keys array contendo campos e valores do banco
      * @return string retorna string com formatação para manipulação no banco
      */
-    private static function getKeysSQLFormated(array $keys)
+    private function getKeysSQLFormated(array $keys)
     {
         return implode(', ',array_keys($keys));
     }
@@ -156,7 +155,7 @@ trait MysqlDB
      * @param  array  $values [description]
      * @return [type]         [description]
      */
-    private static function getValuesSQLFormated(array $values, $sem_aspas_simples = false)
+    private function getValuesSQLFormated(array $values, $sem_aspas_simples = false)
     {
         if ($sem_aspas_simples) {
             return implode(", ", array_values($values));
@@ -169,13 +168,13 @@ trait MysqlDB
      * Validate if table exists, if not, create it
      * @return bool return true if table exists or table ir created
      */
-    private static function validateTable()
+    private function validateTable()
     {
-        if (self::tableExists()) {
+        if ($this->tableExists()) {
             return true;
         }
 
-        if (self::createTable()) {
+        if ($this->createTable()) {
             return true;
         }
     }
@@ -185,9 +184,9 @@ trait MysqlDB
      *
      * @return boolean retorna true caso exista, falso caso contrario
      */
-    private static function tableExists()
+    private function tableExists()
     {
-        return (count(DB::select("SHOW TABLES LIKE '".self::$table_name."'")) > 0) ? true : false;
+        return (count(DB::select("SHOW TABLES LIKE '".$this->table_name."'")) > 0) ? true : false;
     }
 
     /**
@@ -195,10 +194,10 @@ trait MysqlDB
      *
      * @return boolean retorna true caso tenha conseguido criar, false caso contrario
      */
-    private static function createTable()
+    private function createTable()
     {
-        $database_structure = implode(', ', self::$database_structure);
-        return DB::statement("CREATE TABLE ".self::$table_name."($database_structure)");
+        $database_structure = implode(', ', $this->database_structure);
+        return DB::statement("CREATE TABLE ".$this->table_name."($database_structure)");
     }
 
     private function log_error()
