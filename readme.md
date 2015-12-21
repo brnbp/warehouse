@@ -1,5 +1,7 @@
 # Warehouse v1
 
+[![Join the chat at https://gitter.im/bruno2546/warehouse](https://badges.gitter.im/bruno2546/warehouse.svg)](https://gitter.im/bruno2546/warehouse?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 php artisan serve
 
 ## Como Utilizar:
