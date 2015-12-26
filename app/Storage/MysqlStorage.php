@@ -25,7 +25,8 @@ class MysqlStorage implements StorageDriverInterface
         "identifier varchar(50) NOT NULL DEFAULT 'none'",
         'content mediumtext NOT NULL',
         "notification_sent tinyint(1) NOT NULL DEFAULT 0",
-        "INDEX verify_existence (identifier, log_name, content(10000), level)",
+        "INDEX level(identifier, log_name, level)",
+        "INDEX data_created(data_created)",
         "PRIMARY KEY (id)"
     ];
 
