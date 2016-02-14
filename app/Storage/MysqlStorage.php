@@ -27,6 +27,7 @@ class MysqlStorage implements StorageDriverInterface
         "notification_sent tinyint(1) NOT NULL DEFAULT 0",
         "INDEX level(identifier, log_name, level)",
         "INDEX data_created(data_created)",
+        "INDEX log_name(log_name)",
         "PRIMARY KEY (id)"
     ];
 
