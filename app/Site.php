@@ -44,6 +44,7 @@ class Site extends Model
 
         if ($result_query == false) {
             $this->response_code = 404;
+            $result_query = '';
         }
 
         return $result_query;

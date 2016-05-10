@@ -3,10 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests;
-use App\Log;
-use App\Site;
-use App\Storage\StorageDriverInterface;
-use App\Storage\MysqlStorage;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Validator;
 use App\Http\Controllers\Controller;
@@ -79,6 +75,15 @@ class WarehouseController extends Controller
         $Log->make();
 
         return response($Log->returnRequest(), 201, [
+            'Content-Type: application/json'
+        ]);
+    }
+
+    public function tables()
+    {
+        $Table = App::make('StorageServiceTable');
+
+        return response($Table->returnAllTables(), 200, [
             'Content-Type: application/json'
         ]);
     }
