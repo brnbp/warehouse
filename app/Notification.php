@@ -12,17 +12,22 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Notification extends Model
 {
-    /** @var  SLACK_WEB_HOOK url to use bot on slack */
+    /** @var string SLACK_WEB_HOOK url to use bot on slack */
     const SLACK_WEB_HOOK = '';
 
     /**
     * Envia Notificação para o Slack ao ocorrer log Critical
-    * @param array $data array com as informações do log critical que foi inserido
+    * @param array $content array com as informações do log critical que foi inserido
+    * @return boolean
     */
     public static function Slack($content)
     {
+        if (empty(self::SLACK_WEB_HOOK)) {
+            return false;
+        }
+
         if ($content['level'] > 1) {
-            return;
+            return false;
         }
 
         $subject = $content['log_name'];
@@ -30,7 +35,6 @@ class Notification extends Model
             $subject = strstr($content['log_name'], '_', true);
         }
 
-        $color = '';
         switch ($content['level']) {
             case 1:
                 $color = 'danger';
@@ -73,5 +77,7 @@ class Notification extends Model
         ];
         $context  = stream_context_create($opts);
         file_get_contents(self::SLACK_WEB_HOOK, false, $context);
+
+        return true;
     }
 }
